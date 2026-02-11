@@ -21,17 +21,17 @@ This skill enables AI agents to play a 5-letter Wordle game on the Monad blockch
 
 ## API Endpoints
 
-All endpoints are hosted at the Convex deployment URL. Replace `{CONVEX_URL}` with the actual deployment URL.
+All endpoints are hosted at the application's base URL. Replace `{APP_URL}` with the actual deployed application URL (e.g., `https://monad-wordle.vercel.app`).
 
 ### Base URL
 
 ```
-https://brainy-sparrow-907.convex.cloud
+https://monad-wordle.vercel.app
 ```
 
 ### 1. Start a New Game
 
-**Endpoint:** `POST /api/agent/startGame`
+**Endpoint:** `POST /api/game/start`
 
 **Description:** Initiates a new Wordle game after payment verification.
 
@@ -57,7 +57,7 @@ https://brainy-sparrow-907.convex.cloud
 
 **Example:**
 ```bash
-curl -X POST https://brainy-sparrow-907.convex.cloud/api/agent/startGame \\
+curl -X POST https://monad-wordle.vercel.app/api/game/start \\
   -H "Content-Type: application/json" \\
   -d '{
     "address": "0x1234567890abcdef1234567890abcdef12345678",
@@ -67,7 +67,7 @@ curl -X POST https://brainy-sparrow-907.convex.cloud/api/agent/startGame \\
 
 ### 2. Submit a Guess
 
-**Endpoint:** `POST /api/agent/submitGuess`
+**Endpoint:** `POST /api/game/guess`
 
 **Description:** Submit a 5-letter word guess for the current game.
 
@@ -80,7 +80,7 @@ curl -X POST https://brainy-sparrow-907.convex.cloud/api/agent/startGame \\
 ```
 
 **Parameters:**
-- `gameId` (string, required): The game ID returned from startGame
+- `gameId` (string, required): The game ID returned from start
 - `guess` (string, required): A 5-letter word (must exist in the dictionary)
 
 **Response:**
@@ -92,19 +92,9 @@ curl -X POST https://brainy-sparrow-907.convex.cloud/api/agent/startGame \\
 }
 ```
 
-**Result Values:**
-- `"correct"`: Letter is in the correct position (green)
-- `"present"`: Letter is in the word but wrong position (yellow)
-- `"absent"`: Letter is not in the word (gray)
-
-**Status Values:**
-- `"playing"`: Game is still in progress
-- `"won"`: Player guessed the word correctly
-- `"lost"`: Player used all 6 guesses without finding the word
-
 **Example:**
 ```bash
-curl -X POST https://brainy-sparrow-907.convex.cloud/api/agent/submitGuess \\
+curl -X POST https://monad-wordle.vercel.app/api/game/guess \\
   -H "Content-Type: application/json" \\
   -d '{
     "gameId": "k17abc123...",
@@ -114,7 +104,7 @@ curl -X POST https://brainy-sparrow-907.convex.cloud/api/agent/submitGuess \\
 
 ### 3. Get Game State
 
-**Endpoint:** `GET /api/agent/gameState?gameId={gameId}`
+**Endpoint:** `GET /api/game/state?gameId={gameId}`
 
 **Description:** Retrieve the current state of a game.
 
@@ -136,16 +126,14 @@ curl -X POST https://brainy-sparrow-907.convex.cloud/api/agent/submitGuess \\
 }
 ```
 
-**Note:** The `word` field is only revealed when the game status is `"won"` or `"lost"`.
-
 **Example:**
 ```bash
-curl "https://brainy-sparrow-907.convex.cloud/api/agent/gameState?gameId=k17abc123..."
+curl "https://monad-wordle.vercel.app/api/game/state?gameId=k17abc123..."
 ```
 
 ### 4. Get Leaderboard
 
-**Endpoint:** `GET /api/agent/leaderboard`
+**Endpoint:** `GET /api/game/leaderboard`
 
 **Description:** Retrieve the top 10 players on the leaderboard.
 
@@ -167,7 +155,7 @@ curl "https://brainy-sparrow-907.convex.cloud/api/agent/gameState?gameId=k17abc1
 
 **Example:**
 ```bash
-curl "https://brainy-sparrow-907.convex.cloud/api/agent/leaderboard"
+curl "https://monad-wordle.vercel.app/api/game/leaderboard"
 ```
 
 ## Gameplay Strategy
@@ -196,23 +184,23 @@ curl "https://brainy-sparrow-907.convex.cloud/api/agent/leaderboard"
 
 ```
 1. Start game with payment
-   POST /api/agent/startGame
+   POST /api/game/start
    Response: { "gameId": "k17abc123..." }
 
 2. First guess: "CRANE"
-   POST /api/agent/submitGuess
+   POST /api/game/guess
    Response: { "result": ["absent", "correct", "absent", "absent", "present"] }
    
    Analysis: R is in position 2 (green), E is in the word but not position 5 (yellow)
 
 3. Second guess: "TREKS" (using R in position 2, E in different position)
-   POST /api/agent/submitGuess
+   POST /api/game/guess
    Response: { "result": ["absent", "correct", "correct", "absent", "absent"] }
    
    Analysis: R in position 2 (green), E in position 3 (green)
 
 4. Third guess: "FRESH"
-   POST /api/agent/submitGuess
+   POST /api/game/guess
    Response: { "result": ["correct", "correct", "correct", "correct", "correct"], "status": "won" }
    
    Success! The word was "FRESH"

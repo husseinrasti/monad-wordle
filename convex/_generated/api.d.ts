@@ -9,7 +9,6 @@
  */
 
 import type * as game from "../game.js";
-import type * as http from "../http.js";
 import type * as seed from "../seed.js";
 import type * as words from "../words.js";
 
@@ -21,7 +20,6 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   game: typeof game;
-  http: typeof http;
   seed: typeof seed;
   words: typeof words;
 }>;
