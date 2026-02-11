@@ -4,10 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther } from "viem";
 import { useQuery } from "@tanstack/react-query";
-import { Header } from "@/components/header";
 import { GameBoard } from "@/components/game-board";
 import { Keyboard } from "@/components/keyboard";
-import { Leaderboard } from "@/components/leaderboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -55,7 +53,7 @@ export default function Home() {
 
           const data = await res.json();
           setGameId(data.gameId);
-          setMessage("Game started! Good luck! 🎮");
+          setMessage("Game started! Good luck!");
         } catch (err: any) {
           setMessage(`Error: ${err.message}`);
         }
@@ -127,9 +125,9 @@ export default function Home() {
           setLetterStatuses(newStatuses);
 
           if (result.status === "won") {
-            setMessage("🎉 Congratulations! You won!");
+            setMessage("Congratulations! You won!");
           } else if (result.status === "lost") {
-            setMessage(`😢 Game over! The word was: ${gameState.word}`);
+            setMessage(`Game over! The word was: ${gameState.word}`);
             // Need to refetch one more time to get the revealed word if lost
             setTimeout(() => refetchGameState(), 500);
           } else {
@@ -165,98 +163,91 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
-          <div className="space-y-6">
-            {!isConnected ? (
+      <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <div className="space-y-6">
+          {!isConnected ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Welcome to Monad Wordle! 🎮</CardTitle>
+                <CardDescription>
+                  Connect your wallet to start playing. Each game costs {GAME_COST} MON.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Click the &quot;Connect Wallet&quot; button in the header to get started.
+                </p>
+              </CardContent>
+            </Card>
+          ) : !gameId ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Start a New Game</CardTitle>
+                <CardDescription>
+                  Pay {GAME_COST} MON to start a new Wordle game. Guess the 5-letter word in 6 tries!
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={handlePayment}
+                  disabled={isSending || isConfirming}
+                  size="lg"
+                  className="w-full"
+                >
+                  {isSending || isConfirming ? "Processing..." : `Pay ${GAME_COST} MON & Start Game`}
+                </Button>
+                {message && (
+                  <p className="text-sm text-center text-muted-foreground">{message}</p>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Welcome to Monad Wordle! 🎮</CardTitle>
-                  <CardDescription>
-                    Connect your wallet to start playing. Each game costs {GAME_COST} MON.
-                  </CardDescription>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {gameState?.status === "playing"
+                        ? `${gameState.guessesRemaining} guesses left`
+                        : gameState?.status === "won"
+                          ? "You won!"
+                          : "Game over"}
+                    </span>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Click the &quot;Connect Wallet&quot; button in the header to get started.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : !gameId ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Start a New Game</CardTitle>
-                  <CardDescription>
-                    Pay {GAME_COST} MON to start a new Wordle game. Guess the 5-letter word in 6 tries!
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button
-                    onClick={handlePayment}
-                    disabled={isSending || isConfirming}
-                    size="lg"
-                    className="w-full"
-                  >
-                    {isSending || isConfirming ? "Processing..." : `Pay ${GAME_COST} MON & Start Game`}
-                  </Button>
+                <CardContent className="space-y-6">
+                  <div className="flex justify-center">
+                    <GameBoard
+                      guesses={gameState?.guesses || []}
+                      results={gameState?.results || []}
+                      currentGuess={currentGuess}
+                    />
+                  </div>
+                  <Keyboard
+                    onKeyPress={handleKeyPress}
+                    letterStatuses={letterStatuses}
+                    disabled={gameState?.status !== "playing"}
+                  />
                   {message && (
-                    <p className="text-sm text-center text-muted-foreground">{message}</p>
+                    <p className="text-center text-sm font-medium">{message}</p>
+                  )}
+                  {gameState?.status !== "playing" && (
+                    <Button
+                      onClick={() => {
+                        setGameId(null);
+                        setCurrentGuess("");
+                        setMessage("");
+                        setLetterStatuses({});
+                      }}
+                      className="w-full"
+                    >
+                      Play Again ({GAME_COST} MON)
+                    </Button>
                   )}
                 </CardContent>
               </Card>
-            ) : (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>Monad Wordle</span>
-                      <span className="text-sm font-normal text-muted-foreground">
-                        {gameState?.status === "playing"
-                          ? `${gameState.guessesRemaining} guesses left`
-                          : gameState?.status === "won"
-                            ? "You won! 🎉"
-                            : "Game over 😢"}
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="flex justify-center">
-                      <GameBoard
-                        guesses={gameState?.guesses || []}
-                        results={gameState?.results || []}
-                        currentGuess={currentGuess}
-                      />
-                    </div>
-                    <Keyboard
-                      onKeyPress={handleKeyPress}
-                      letterStatuses={letterStatuses}
-                      disabled={gameState?.status !== "playing"}
-                    />
-                    {message && (
-                      <p className="text-center text-sm font-medium">{message}</p>
-                    )}
-                    {gameState?.status !== "playing" && (
-                      <Button
-                        onClick={() => {
-                          setGameId(null);
-                          setCurrentGuess("");
-                          setMessage("");
-                          setLetterStatuses({});
-                        }}
-                        className="w-full"
-                      >
-                        Play Again ({GAME_COST} MON)
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
-          <div>
-            <Leaderboard />
-          </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
