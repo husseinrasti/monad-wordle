@@ -25,8 +25,14 @@ export async function POST(request: Request) {
         return NextResponse.json({ gameId, message: "Game started successfully" });
     } catch (error: any) {
         console.error("Error starting game:", error);
+
+        let errorMessage = error.message || "Failed to start game";
+        if (errorMessage.includes("Uncaught Error: ")) {
+            errorMessage = errorMessage.split("Uncaught Error: ")[1].split("\n")[0];
+        }
+
         return NextResponse.json(
-            { error: error.message || "Failed to start game" },
+            { error: errorMessage },
             { status: 500 }
         );
     }

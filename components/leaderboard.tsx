@@ -1,11 +1,27 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
+interface LeaderboardEntry {
+    rank: number;
+    address: string;
+    gamesPlayed: number;
+    gamesWon: number;
+    winRate: number;
+    currentStreak: number;
+    maxStreak: number;
+}
+
 export function Leaderboard() {
-    const leaderboard = useQuery(api.game.getLeaderboard, {});
+    const { data: leaderboard } = useQuery<LeaderboardEntry[]>({
+        queryKey: ["leaderboard"],
+        queryFn: async () => {
+            const res = await fetch("/api/game/leaderboard");
+            if (!res.ok) throw new Error("Failed to fetch leaderboard");
+            return res.json();
+        },
+    });
 
     if (!leaderboard) {
         return (

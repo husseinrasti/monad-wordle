@@ -3,20 +3,24 @@ import { FIVE_LETTER_WORDS } from "./words";
 
 export const seedWords = internalMutation({
     handler: async (ctx) => {
-        // Check if words are already seeded
-        const existingWords = await ctx.db.query("words").first();
-        if (existingWords) {
-            console.log("Words already seeded");
-            return { message: "Words already seeded", count: 0 };
-        }
+        // Get all existing words
+        const existingWords = await ctx.db.query("words").collect();
+        const existingWordSet = new Set(existingWords.map((w) => w.text));
 
-        // Insert all words
+        // Insert missing words
         let count = 0;
         for (const word of FIVE_LETTER_WORDS) {
-            await ctx.db.insert("words", { text: word.toLowerCase() });
-            count++;
+            const normalizedWord = word.toLowerCase();
+            if (!existingWordSet.has(normalizedWord)) {
+                await ctx.db.insert("words", { text: normalizedWord });
+                count++;
+            }
         }
 
-        return { message: "Words seeded successfully", count };
+        if (count > 0) {
+            return { message: `Added ${count} new words`, count };
+        } else {
+            return { message: "All words already seeded", count: 0 };
+        }
     },
 });

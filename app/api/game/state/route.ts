@@ -23,8 +23,14 @@ export async function GET(request: Request) {
         return NextResponse.json(gameState);
     } catch (error: any) {
         console.error("Error fetching game state:", error);
+
+        let errorMessage = error.message || "Failed to fetch game state";
+        if (errorMessage.includes("Uncaught Error: ")) {
+            errorMessage = errorMessage.split("Uncaught Error: ")[1].split("\n")[0];
+        }
+
         return NextResponse.json(
-            { error: error.message || "Failed to fetch game state" },
+            { error: errorMessage },
             { status: 500 }
         );
     }

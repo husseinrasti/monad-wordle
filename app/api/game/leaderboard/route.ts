@@ -8,8 +8,14 @@ export async function GET() {
         return NextResponse.json(leaderboard);
     } catch (error: any) {
         console.error("Error fetching leaderboard:", error);
+
+        let errorMessage = error.message || "Failed to fetch leaderboard";
+        if (errorMessage.includes("Uncaught Error: ")) {
+            errorMessage = errorMessage.split("Uncaught Error: ")[1].split("\n")[0];
+        }
+
         return NextResponse.json(
-            { error: error.message || "Failed to fetch leaderboard" },
+            { error: errorMessage },
             { status: 500 }
         );
     }

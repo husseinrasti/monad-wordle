@@ -23,8 +23,14 @@ export async function POST(request: Request) {
         return NextResponse.json(result);
     } catch (error: any) {
         console.error("Error submitting guess:", error);
+
+        let errorMessage = error.message || "Failed to submit guess";
+        if (errorMessage.includes("Uncaught Error: ")) {
+            errorMessage = errorMessage.split("Uncaught Error: ")[1].split("\n")[0];
+        }
+
         return NextResponse.json(
-            { error: error.message || "Failed to submit guess" },
+            { error: errorMessage },
             { status: 400 }
         );
     }

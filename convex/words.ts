@@ -50,5 +50,6 @@ export const FIVE_LETTER_WORDS = [
     "upper", "upset", "urban", "usage", "usual", "valid", "value", "video", "virus", "visit",
     "vital", "vocal", "voice", "waste", "watch", "water", "wheel", "where", "which", "while",
     "white", "whole", "whose", "woman", "women", "world", "worry", "worse", "worst", "worth",
-    "would", "wound", "write", "wrong", "wrote", "young", "youth", "zones"
+    "would", "wound", "write", "wrong", "wrote", "young", "youth", "zones",
+    "adieu", "stare", "roate", "soare", "slate", "trace", "crate", "salet", "reast", "alien"
 ];

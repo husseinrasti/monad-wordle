@@ -12,11 +12,11 @@ export const monadTestnet = defineChain({
     },
     rpcUrls: {
         default: {
-            http: ["https://testnet.monad.xyz"],
+            http: ["https://testnet-rpc.monad.xyz"],
         },
     },
     blockExplorers: {
-        default: { name: "Monad Explorer", url: "https://explorer.testnet.monad.xyz" },
+        default: { name: "Monad Explorer", url: "https://testnet.monadvision.com" },
     },
     testnet: true,
 });

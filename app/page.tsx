@@ -3,26 +3,34 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther } from "viem";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/header";
 import { GameBoard } from "@/components/game-board";
 import { Keyboard } from "@/components/keyboard";
 import { Leaderboard } from "@/components/leaderboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Id } from "@/convex/_generated/dataModel";
+
+const GAME_COST = process.env.NEXT_PUBLIC_GAME_COST || "1";
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-  const [gameId, setGameId] = useState<Id<"games"> | null>(null);
+  const [gameId, setGameId] = useState<string | null>(null);
   const [currentGuess, setCurrentGuess] = useState("");
   const [message, setMessage] = useState("");
   const [letterStatuses, setLetterStatuses] = useState<Record<string, "correct" | "present" | "absent">>({});
 
-  const createGame = useMutation(api.game.createGame);
-  const submitGuess = useMutation(api.game.submitGuess);
-  const gameState = useQuery(api.game.getGameState, gameId ? { gameId } : "skip");
+  // Fetch game state
+  const { data: gameState, refetch: refetchGameState } = useQuery({
+    queryKey: ["gameState", gameId],
+    queryFn: async () => {
+      if (!gameId) return null;
+      const res = await fetch(`/api/game/state?gameId=${gameId}`);
+      if (!res.ok) throw new Error("Failed to fetch game state");
+      return res.json();
+    },
+    enabled: !!gameId,
+  });
 
   const { sendTransaction, data: txHash, isPending: isSending } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -31,17 +39,31 @@ export default function Home() {
 
   // Start game after payment is confirmed
   useEffect(() => {
-    if (isConfirmed && txHash && address) {
-      createGame({ address, txHash })
-        .then((id) => {
-          setGameId(id);
+    const startGame = async () => {
+      if (isConfirmed && txHash && address) {
+        try {
+          const res = await fetch("/api/game/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ address, txHash }),
+          });
+
+          if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || "Failed to start game");
+          }
+
+          const data = await res.json();
+          setGameId(data.gameId);
           setMessage("Game started! Good luck! 🎮");
-        })
-        .catch((err) => {
+        } catch (err: any) {
           setMessage(`Error: ${err.message}`);
-        });
-    }
-  }, [isConfirmed, txHash, address, createGame]);
+        }
+      }
+    };
+
+    startGame();
+  }, [isConfirmed, txHash, address]);
 
   const handlePayment = () => {
     if (!address) {
@@ -51,9 +73,24 @@ export default function Home() {
 
     sendTransaction({
       to: address, // For MVP, sending to self. In production, send to game contract
-      value: parseEther("10"),
+      value: parseEther(GAME_COST),
     });
     setMessage("Processing payment... Please confirm in your wallet.");
+  };
+
+  const submitNewGuess = async (gameId: string, guess: string) => {
+    const res = await fetch("/api/game/guess", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameId, guess }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || "Failed to submit guess");
+    }
+
+    return res.json();
   };
 
   const handleKeyPress = useCallback(
@@ -67,10 +104,14 @@ export default function Home() {
         }
 
         try {
-          const result = await submitGuess({ gameId, guess: currentGuess });
+          const result = await submitNewGuess(gameId, currentGuess);
           setCurrentGuess("");
 
-          // Update letter statuses
+          // Refetch game state to update board
+          await refetchGameState();
+
+          // Update letter statuses locally for immediate feedback 
+          // (though refetch will eventually sync it)
           const newStatuses = { ...letterStatuses };
           currentGuess.split("").forEach((letter, i) => {
             const status = result.result[i];
@@ -89,6 +130,8 @@ export default function Home() {
             setMessage("🎉 Congratulations! You won!");
           } else if (result.status === "lost") {
             setMessage(`😢 Game over! The word was: ${gameState.word}`);
+            // Need to refetch one more time to get the revealed word if lost
+            setTimeout(() => refetchGameState(), 500);
           } else {
             setMessage(`${result.guessesRemaining} guesses remaining`);
           }
@@ -101,7 +144,7 @@ export default function Home() {
         setCurrentGuess((prev) => prev + key.toLowerCase());
       }
     },
-    [gameId, gameState, currentGuess, submitGuess, letterStatuses]
+    [gameId, gameState, currentGuess, letterStatuses, refetchGameState]
   );
 
   // Keyboard event listener
@@ -131,12 +174,12 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle>Welcome to Monad Wordle! 🎮</CardTitle>
                   <CardDescription>
-                    Connect your wallet to start playing. Each game costs 10 MON.
+                    Connect your wallet to start playing. Each game costs {GAME_COST} MON.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Click the "Connect Wallet" button in the header to get started.
+                    Click the &quot;Connect Wallet&quot; button in the header to get started.
                   </p>
                 </CardContent>
               </Card>
@@ -145,7 +188,7 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle>Start a New Game</CardTitle>
                   <CardDescription>
-                    Pay 10 MON to start a new Wordle game. Guess the 5-letter word in 6 tries!
+                    Pay {GAME_COST} MON to start a new Wordle game. Guess the 5-letter word in 6 tries!
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -155,7 +198,7 @@ export default function Home() {
                     size="lg"
                     className="w-full"
                   >
-                    {isSending || isConfirming ? "Processing..." : "Pay 10 MON & Start Game"}
+                    {isSending || isConfirming ? "Processing..." : `Pay ${GAME_COST} MON & Start Game`}
                   </Button>
                   {message && (
                     <p className="text-sm text-center text-muted-foreground">{message}</p>
@@ -203,7 +246,7 @@ export default function Home() {
                         }}
                         className="w-full"
                       >
-                        Play Again (10 MON)
+                        Play Again ({GAME_COST} MON)
                       </Button>
                     )}
                   </CardContent>
