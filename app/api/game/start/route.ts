@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { convexClient } from "@/lib/convex-client";
 import { api } from "@/convex/_generated/api";
 import { createPublicClient, http, decodeEventLog } from "viem";
-import { monadMainnet } from "@/lib/wagmi"; // Reusing the chain definition, we'll call it "Mainnet" in logic if needed
+import { monadMainnet } from "@/lib/chains";
 import gameAbi from "@/contract/abi.json";
 
-const RPC_URL = process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://rpc3.monad.xyz";
+const RPC_URL = process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://monad-mainnet.drpc.org";
 const GAME_CONTRACT = process.env.NEXT_PUBLIC_WORDLE_GAME_CONTRACT as `0x${string}`;
 
 const publicClient = createPublicClient({
