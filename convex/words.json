@@ -1,5 +1,4 @@
-// Common 5-letter words for Wordle
-export const FIVE_LETTER_WORDS = [
+[
     "aahed",
     "aalii",
     "aapas",
@@ -14855,4 +14854,4 @@ export const FIVE_LETTER_WORDS = [
     "zygon",
     "zymes",
     "zymic"
-];
+]

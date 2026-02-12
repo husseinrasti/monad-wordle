@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { ConnectKitButton } from "connectkit";
 import { ThemeToggle } from "./theme-toggle";
 
+import { Button } from "@/components/ui/button";
+
 export function Header() {
     const pathname = usePathname();
 
@@ -38,6 +40,14 @@ export function Header() {
                 </div>
                 <div className="flex items-center gap-4">
                     <ThemeToggle />
+                    <Link
+                        href="https://nad.fun/tokens/0xAfcECBd7c43ABbDB10C394ad03C9D88ec8377777"
+                        target="_blank"
+                    >
+                        <Button variant="outline" className="font-bold border-primary/50 hover:bg-primary/10">
+                            Buy $WORDLE
+                        </Button>
+                    </Link>
                     <ConnectKitButton />
                 </div>
             </div>
