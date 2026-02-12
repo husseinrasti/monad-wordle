@@ -3,26 +3,129 @@ name: monad-wordle
 description: Play a 5-letter Wordle game on the Monad blockchain using $WORDLE tokens. Start games, submit guesses, and retrieve game state via HTTP API. Use when the user wants to play Wordle, interact with blockchain games, or test Monad network integration.
 license: MIT
 metadata:
-  author: monad-wordle
-  version: "2.0"
-  blockchain: Monad Mainnet
-  payment: 100 $WORDLE per game
+  author: Hussein Rasti
+  version: "3.0"
+  network:
+    chain: Monad Mainnet
+    game_contract:
+      address: 0x143c5Fd7186470d2d0b1465C10571874c43FD297
+    token:
+      address: 0xAfcECBd7c43ABbDB10C394ad03C9D88ec8377777
+      symbol: WORDLE
+  payment:
+    cost_per_game: 100 WORDLE
+  tags:
+    - blockchain
+    - game
+    - wordle
+    - monad
+    - erc20
+    - onchain-payment
 ---
 
 # Monad Wordle Skill
 
 This skill enables AI agents to play a 5-letter Wordle game on the Monad Mainnet blockhain. The game requires a payment of 100 $WORDLE tokens to start, and agents can submit guesses and retrieve game state through a clean HTTP API.
 
+**Note: All token purchases and game operations must happen on Monad Mainnet.**
+
+------------------------------------------------------------------------
+
+## Dependencies
+This skill does NOT directly execute blockchain transactions.
+
+It requires:
+- HTTP client capability
+- Monad SKILL: https://clawhub.ai/portdeveloper/monad-development
+- Nad.fun SKILL: https://nad.fun/skill.md
+- Nad.fun Trading SKILL: https://nad.fun/trading.md
+
+------------------------------------------------------------------------
+
 ## Prerequisites
 
-- Access to **Monad Mainnet**
-- Wallet with at least 100 $WORDLE tokens for payment
-- HTTP client capability
-- Monad SKILL: [https://clawhub.ai/portdeveloper/monad-development](https://clawhub.ai/portdeveloper/monad-development)
-- Nad.fun SKILL: [https://nad.fun/skill.md](https://nad.fun/skill.md)
-- Nad.fun Trading SKILL: [https://nad.fun/trading.md](https://nad.fun/trading.md)
+Before starting a game:
 
-**Note: All token purchases and game operations must happen on Monad Mainnet.**
+1.  Wallet must be connected to Monad Mainnet
+2.  Wallet must hold $MON
+3.  Agent must swap $MON → $WORDLE on nad.fun
+4.  Wallet must hold at least 100 $WORDLE
+5.  Approve WordleGame contract to spend $WORDLE
+
+------------------------------------------------------------------------
+
+## Required Swap Flow
+
+1.  Ensure wallet has sufficient $MON
+2.  Use Nad.fun Trading SKILL
+3.  Swap $MON → $WORDLE on Monad Mainnet
+4.  Confirm $WORDLE balance ≥ 100
+
+Without $MON, user cannot obtain $WORDLE.
+
+------------------------------------------------------------------------
+
+## Execution Flow
+
+User → Agent
+↓
+Connect wallet to Monad Mainnet
+↓
+Check $WORDLE balance
+↓
+If insufficient → Swap $MON → $WORDLE via nad.fun
+↓
+Approve WordleGame contract
+↓
+Call playGame() on contract
+↓
+Receive txHash
+↓
+POST txHash to /api/game/start
+↓
+Game session created
+
+------------------------------------------------------------------------
+
+## Smart Contract Details
+
+$WORDLE Token
+- Address: `0xAfcECBd7c43ABbDB10C394ad03C9D88ec8377777`
+- Symbol: WORDLE
+- Decimals: 18
+
+WordleGame Contract
+- Address: `0x143c5Fd7186470d2d0b1465C10571874c43FD297`
+- ABI: [gameAbi](https://github.com/husseinrasti/monad-wordle/blob/main/contract/abi.json)
+
+------------------------------------------------------------------------
+
+## Payment Flow
+
+To play the game, an agent must follow these steps on **Monad Mainnet**:
+
+1. **Connect to Monad Mainnet** with your wallet.
+2. **Purchase $WORDLE tokens:** Purchase at least 100 $WORDLE tokens.
+3. **Approve and Pay:** Call the `playGame()` function on the **WordleGame contract**.
+4. **Start Game:** After payment, pass the transaction hash to the `/api/game/start` endpoint.
+
+------------------------------------------------------------------------
+
+## Payment Validation Rules
+
+API must verify:
+
+-   Transaction executed on Monad Mainnet
+-   tx.to == WordleGame contract
+-   ERC20 token == $WORDLE
+-   Amount ≥ 100 $WORDLE
+-   GamePlayed event emitted
+-   txHash not previously used
+-   Sender == provided address
+
+Replay attacks must be prevented.
+
+------------------------------------------------------------------------
 
 ## API Endpoints
 
@@ -162,18 +265,7 @@ curl "https://wordle.nadnation.xyz/api/game/state?gameId=k17abc123..."
 curl "https://wordle.nadnation.xyz/api/game/leaderboard"
 ```
 
-## Payment Flow
-
-To play the game, an agent must follow these steps on **Monad Mainnet**:
-
-1. **Connect to Monad Mainnet** with your wallet.
-2. **Purchase $WORDLE tokens:** Purchase at least 100 $WORDLE tokens from [nad.fun](https://nad.fun).
-   - $WORDLE token address: `0xAfcECBd7c43ABbDB10C394ad03C9D88ec8377777`
-3. **Approve and Pay:** 
-   - Approve the WordleGame contract to spend your $WORDLE tokens.
-   - Call the `playGame()` function on the **WordleGame contract**.
-   - WordleGame contract address: `0x143c5Fd7186470d2d0b1465C10571874c43FD297`
-4. **Start Game:** After payment, pass the transaction hash to the `/api/game/start` endpoint.
+------------------------------------------------------------------------
 
 ## Gameplay Strategy
 
@@ -187,6 +279,8 @@ To play the game, an agent must follow these steps on **Monad Mainnet**:
    - Yellow (present): Letter exists but in wrong position
    - Gray (absent): Letter is not in the word
 
+------------------------------------------------------------------------
+
 ## Error Handling
 
 ### Common Errors
@@ -196,6 +290,27 @@ To play the game, an agent must follow these steps on **Monad Mainnet**:
 3. **Not a valid word:** `{ "error": "Not a valid word" }`
 4. **Wrong length:** `{ "error": "Guess must be exactly 5 letters" }`
 5. **Game already finished:** `{ "error": "Game is already finished" }`
+
+------------------------------------------------------------------------
+
+## Capabilities
+
+-   Verify on-chain $WORDLE payments
+-   Start paid game sessions
+-   Submit guesses
+-   Retrieve leaderboard
+-   Prevent replay attacks
+
+------------------------------------------------------------------------
+
+## Limitations
+
+-   Cannot custody user funds
+-   Cannot execute blockchain transactions without Monad SKILL
+-   Only supports Monad Mainnet
+-   Requires user to hold $MON before swapping
+
+------------------------------------------------------------------------
 
 ## Support
 
