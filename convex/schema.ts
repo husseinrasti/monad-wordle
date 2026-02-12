@@ -21,7 +21,8 @@ export default defineSchema({
         ),
         txHash: v.string(),
         createdAt: v.number(),
-    }).index("by_user", ["userId"]),
+    }).index("by_user", ["userId"])
+        .index("by_txHash", ["txHash"]),
 
     words: defineTable({
         text: v.string(),

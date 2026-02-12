@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectKitButton } from "connectkit";
 import { ThemeToggle } from "./theme-toggle";
-
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 export function Header() {
@@ -20,7 +20,17 @@ export function Header() {
         <header className="border-b border-border bg-card sticky top-0 z-50">
             <div className="container mx-auto flex h-16 items-center justify-between px-4">
                 <div className="flex items-center gap-8">
-                    <Link href="/" className="flex items-center gap-2">
+                    <Link href="/" className="flex items-center gap-3 group">
+                        <div className="relative w-10 h-10 overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center transition-transform group-hover:scale-105">
+                            <Image
+                                src="/logo.png"
+                                alt="Monad Wordle Logo"
+                                width={40}
+                                height={40}
+                                className="object-contain"
+                                priority
+                            />
+                        </div>
                         <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                             Monad Wordle
                         </h1>

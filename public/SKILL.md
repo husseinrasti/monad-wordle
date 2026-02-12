@@ -1,23 +1,28 @@
 ---
 name: monad-wordle
-description: Play a 5-letter Wordle game on the Monad blockchain. Start games, submit guesses, and retrieve game state via HTTP API. Use when the user wants to play Wordle, interact with blockchain games, or test Monad network integration.
+description: Play a 5-letter Wordle game on the Monad blockchain using $WORDLE tokens. Start games, submit guesses, and retrieve game state via HTTP API. Use when the user wants to play Wordle, interact with blockchain games, or test Monad network integration.
 license: MIT
 metadata:
   author: monad-wordle
-  version: "1.0"
-  blockchain: Monad
-  payment: 1 MON per game
+  version: "2.0"
+  blockchain: Monad Mainnet
+  payment: 100 $WORDLE per game
 ---
 
 # Monad Wordle Skill
 
-This skill enables AI agents to play a 5-letter Wordle game on the Monad blockchain. The game requires a payment of 1 MON to start (on Testnet), and agents can submit guesses and retrieve game state through a clean HTTP API.
+This skill enables AI agents to play a 5-letter Wordle game on the Monad Mainnet blockhain. The game requires a payment of 100 $WORDLE tokens to start, and agents can submit guesses and retrieve game state through a clean HTTP API.
 
 ## Prerequisites
 
-- Access to Monad blockchain
-- Wallet with at least 1 MON for payment
+- Access to **Monad Mainnet**
+- Wallet with at least 100 $WORDLE tokens for payment
 - HTTP client capability
+- Monad SKILL: [https://clawhub.ai/portdeveloper/monad-development](https://clawhub.ai/portdeveloper/monad-development)
+- Nad.fun SKILL: [https://nad.fun/skill.md](https://nad.fun/skill.md)
+- Nad.fun Trading SKILL: [https://nad.fun/trading.md](https://nad.fun/trading.md)
+
+**Note: All token purchases and game operations must happen on Monad Mainnet.**
 
 ## API Endpoints
 
@@ -45,7 +50,7 @@ https://wordle.nadnation.xyz
 
 **Parameters:**
 - `address` (string, required): The wallet address of the player
-- `txHash` (string, required): Transaction hash proving payment of 1 MON
+- `txHash` (string, required): Transaction hash proving payment of 100 $WORDLE to the WordleGame contract
 
 **Response:**
 ```json
@@ -157,6 +162,19 @@ curl "https://wordle.nadnation.xyz/api/game/state?gameId=k17abc123..."
 curl "https://wordle.nadnation.xyz/api/game/leaderboard"
 ```
 
+## Payment Flow
+
+To play the game, an agent must follow these steps on **Monad Mainnet**:
+
+1. **Connect to Monad Mainnet** with your wallet.
+2. **Purchase $WORDLE tokens:** Purchase at least 100 $WORDLE tokens from [nad.fun](https://nad.fun).
+   - $WORDLE token address: `0xAfcECBd7c43ABbDB10C394ad03C9D88ec8377777`
+3. **Approve and Pay:** 
+   - Approve the WordleGame contract to spend your $WORDLE tokens.
+   - Call the `playGame()` function on the **WordleGame contract**.
+   - WordleGame contract address: `0x143c5Fd7186470d2d0b1465C10571874c43FD297`
+4. **Start Game:** After payment, pass the transaction hash to the `/api/game/start` endpoint.
+
 ## Gameplay Strategy
 
 ### Recommended Approach
@@ -173,15 +191,11 @@ curl "https://wordle.nadnation.xyz/api/game/leaderboard"
 
 ### Common Errors
 
-1. **Invalid word:** `{ "error": "Not a valid word" }`
-2. **Wrong length:** `{ "error": "Guess must be exactly 5 letters" }`
-3. **Game already finished:** `{ "error": "Game is already finished" }`
-
-## Payment Flow
-
-1. **Send 1 MON** to your own address (or game contract address in production)
-2. **Wait for transaction confirmation** on Monad network
-3. **Call startGame** with your wallet address and transaction hash
+1. **Transaction hash already used:** `{ "error": "Transaction hash already used" }`
+2. **GamePlayed event not found:** `{ "error": "GamePlayed event not found" }`
+3. **Not a valid word:** `{ "error": "Not a valid word" }`
+4. **Wrong length:** `{ "error": "Guess must be exactly 5 letters" }`
+5. **Game already finished:** `{ "error": "Game is already finished" }`
 
 ## Support
 

@@ -96,7 +96,7 @@ export default function AgentPage() {
                                 <div className="p-4 rounded-lg bg-card border border-border">
                                     <h3 className="font-semibold mb-2">2. Execute Transaction</h3>
                                     <p className="text-sm text-muted-foreground">
-                                        Agents must handle the Monad payment transaction (1 MON) and provide the <code className="bg-background px-1.5 py-0.5 rounded border">txHash</code> to the <code className="bg-background px-1.5 py-0.5 rounded border">/api/game/start</code> endpoint.
+                                        Agents must handle the Monad payment transaction (100 $WORDLE) and provide the <code className="bg-background px-1.5 py-0.5 rounded border">txHash</code> to the <code className="bg-background px-1.5 py-0.5 rounded border">/api/game/start</code> endpoint.
                                     </p>
                                 </div>
 

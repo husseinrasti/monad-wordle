@@ -1,18 +1,25 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
-import { parseEther } from "viem";
+import { parseUnits, erc20Abi } from "viem";
 import { useQuery } from "@tanstack/react-query";
+import Image from "next/image";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from "wagmi";
+import { monadMainnet } from "@/lib/wagmi";
+import gameAbi from "@/contract/abi.json";
 import { GameBoard } from "@/components/game-board";
 import { Keyboard } from "@/components/keyboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const GAME_COST = process.env.NEXT_PUBLIC_GAME_COST || "1";
+const GAME_COST = process.env.NEXT_PUBLIC_GAME_COST || "100";
+const WORDLE_TOKEN = process.env.NEXT_PUBLIC_WORDLE_TOKEN_ADDRESS as `0x${string}`;
+const WORDLE_GAME = process.env.NEXT_PUBLIC_WORDLE_GAME_CONTRACT as `0x${string}`;
 
 export default function Home() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
+  const activeChainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const [gameId, setGameId] = useState<string | null>(null);
   const [currentGuess, setCurrentGuess] = useState("");
   const [message, setMessage] = useState("");
@@ -30,9 +37,23 @@ export default function Home() {
     enabled: !!gameId,
   });
 
-  const { sendTransaction, data: txHash, isPending: isSending } = useSendTransaction();
+  const { writeContractAsync } = useWriteContract();
+  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const { data: allowance } = useReadContract({
+    address: WORDLE_TOKEN,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: address ? [address, WORDLE_GAME] : undefined,
+    chainId: monadMainnet.id,
+    query: {
+      enabled: !!address,
+    }
+  });
+
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
+    hash: txHash || undefined,
   });
 
   // Start game after payment is confirmed
@@ -54,26 +75,61 @@ export default function Home() {
           const data = await res.json();
           setGameId(data.gameId);
           setMessage("Game started! Good luck!");
+          setTxHash(null);
         } catch (err: any) {
           setMessage(`Error: ${err.message}`);
+        } finally {
+          setIsProcessing(false);
         }
       }
     };
 
-    startGame();
+    if (isConfirmed) {
+      startGame();
+    }
   }, [isConfirmed, txHash, address]);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!address) {
       setMessage("Please connect your wallet first");
       return;
     }
 
-    sendTransaction({
-      to: address, // For MVP, sending to self. In production, send to game contract
-      value: parseEther(GAME_COST),
-    });
-    setMessage("Processing payment... Please confirm in your wallet.");
+    try {
+      setIsProcessing(true);
+      setMessage("Checking token allowance...");
+
+      const cost = parseUnits(GAME_COST, 18);
+
+      // 1. Check/Request Approval if needed
+      if (!allowance || allowance < cost) {
+        setMessage("Approving $WORDLE tokens...");
+        const approveHash = await writeContractAsync({
+          address: WORDLE_TOKEN,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [WORDLE_GAME, cost],
+          chainId: monadMainnet.id,
+        });
+        setMessage("Approval pending... please wait.");
+      }
+
+      // 2. Call playGame
+      setMessage("Starting game... Please confirm in your wallet.");
+      const gameTxHash = await writeContractAsync({
+        address: WORDLE_GAME,
+        abi: gameAbi,
+        functionName: "playGame",
+        chainId: monadMainnet.id,
+      });
+
+      setTxHash(gameTxHash);
+      setMessage("Transaction sent! Waiting for confirmation...");
+    } catch (err: any) {
+      console.error(err);
+      setMessage(`Error: ${err.shortMessage || err.message}`);
+      setIsProcessing(false);
+    }
   };
 
   const submitNewGuess = async (gameId: string, guess: string) => {
@@ -166,12 +222,17 @@ export default function Home() {
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="space-y-6">
           {!isConnected ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Welcome to Monad Wordle! 🎮</CardTitle>
-                <CardDescription>
-                  Connect your wallet to start playing. Each game costs {GAME_COST} MON.
-                </CardDescription>
+            <Card className="overflow-hidden border-primary/20 bg-gradient-to-b from-card to-primary/5">
+              <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+                <div className="relative w-16 h-16 rounded-2xl border border-primary/20 bg-background flex items-center justify-center p-2 shadow-inner">
+                  <Image src="/logo.png" alt="Logo" width={48} height={48} className="object-contain" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">Welcome to Monad Wordle!</CardTitle>
+                  <CardDescription>
+                    Connect your wallet to start playing. Each game costs {GAME_COST} $WORDLE.
+                  </CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
@@ -180,22 +241,38 @@ export default function Home() {
               </CardContent>
             </Card>
           ) : !gameId ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Start a New Game</CardTitle>
-                <CardDescription>
-                  Pay {GAME_COST} MON to start a new Wordle game. Guess the 5-letter word in 6 tries!
-                </CardDescription>
+            <Card className="overflow-hidden border-primary/20 bg-gradient-to-b from-card to-primary/5">
+              <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+                <div className="relative w-16 h-16 rounded-2xl border border-primary/20 bg-background flex items-center justify-center p-2 shadow-inner">
+                  <Image src="/logo.png" alt="Logo" width={48} height={48} className="object-contain" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl">Start a New Game</CardTitle>
+                  <CardDescription>
+                    Pay {GAME_COST} $WORDLE to start a new Wordle game. Guess the 5-letter word in 6 tries!
+                  </CardDescription>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button
-                  onClick={handlePayment}
-                  disabled={isSending || isConfirming}
-                  size="lg"
-                  className="w-full"
-                >
-                  {isSending || isConfirming ? "Processing..." : `Pay ${GAME_COST} MON & Start Game`}
-                </Button>
+                {chain?.id !== monadMainnet.id ? (
+                  <Button
+                    onClick={() => switchChain({ chainId: monadMainnet.id })}
+                    size="lg"
+                    className="w-full"
+                    variant="destructive"
+                  >
+                    Switch to Monad Mainnet
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handlePayment}
+                    disabled={isProcessing || isConfirming}
+                    size="lg"
+                    className="w-full"
+                  >
+                    {isProcessing || isConfirming ? "Processing..." : `Pay ${GAME_COST} $WORDLE & Start Game`}
+                  </Button>
+                )}
                 {message && (
                   <p className="text-sm text-center text-muted-foreground">{message}</p>
                 )}
@@ -241,7 +318,7 @@ export default function Home() {
                       }}
                       className="w-full"
                     >
-                      Play Again ({GAME_COST} MON)
+                      Play Again ({GAME_COST} $WORDLE)
                     </Button>
                   )}
                 </CardContent>

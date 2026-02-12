@@ -10,6 +10,16 @@ export const createGame = mutation({
         txHash: v.string(),
     },
     handler: async (ctx, args) => {
+        // Prevent replay attacks
+        const existingTx = await ctx.db
+            .query("games")
+            .withIndex("by_txHash", (q) => q.eq("txHash", args.txHash))
+            .first();
+
+        if (existingTx) {
+            throw new Error("Transaction hash already used");
+        }
+
         // Get or create user
         let userId;
         const existing = await ctx.db
