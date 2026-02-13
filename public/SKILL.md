@@ -1,6 +1,6 @@
 ---
 name: monad-wordle
-description: Play a 5-letter Wordle game on the Monad blockchain using $WORDLE tokens. Start games, submit guesses, and retrieve game state via HTTP API. Use when the user wants to play Wordle, interact with blockchain games, or test Monad network integration.
+description: Play a 5-letter Wordle game on the Monad blockchain using $WORDLE tokens. Start games, submit guesses, and retrieve game state via HTTP API.
 license: MIT
 metadata:
   author: Hussein Rasti
@@ -31,41 +31,19 @@ This skill enables AI agents to play a 5-letter Wordle game on the Monad Mainnet
 
 ------------------------------------------------------------------------
 
-## Dependencies
-This skill does NOT directly execute blockchain transactions.
-
-It requires:
-- HTTP client capability
-- Monad SKILL: https://clawhub.ai/portdeveloper/monad-development
-- Nad.fun SKILL: https://nad.fun/skill.md
-- Nad.fun Trading SKILL: https://nad.fun/trading.md
-
-------------------------------------------------------------------------
-
-## Prerequisites
+### Prerequisites
 
 Before starting a game:
 
 1.  Wallet must be connected to Monad Mainnet
 2.  Wallet must hold $MON
-3.  Agent must swap $MON → $WORDLE on nad.fun
+3.  Agent must buy $WORDLE wit $MON on nad.fun
 4.  Wallet must hold at least 100 $WORDLE
 5.  Approve WordleGame contract to spend $WORDLE
 
 ------------------------------------------------------------------------
 
-## Required Swap Flow
-
-1.  Ensure wallet has sufficient $MON
-2.  Use Nad.fun Trading SKILL
-3.  Swap $MON → $WORDLE on Monad Mainnet
-4.  Confirm $WORDLE balance ≥ 100
-
-Without $MON, user cannot obtain $WORDLE.
-
-------------------------------------------------------------------------
-
-## Execution Flow
+### Execution Flow
 
 User → Agent
 ↓
@@ -73,7 +51,7 @@ Connect wallet to Monad Mainnet
 ↓
 Check $WORDLE balance
 ↓
-If insufficient → Swap $MON → $WORDLE via nad.fun
+If insufficient → buy $WORDLE wit $MON via nad.fun
 ↓
 Approve WordleGame contract
 ↓
@@ -87,7 +65,7 @@ Game session created
 
 ------------------------------------------------------------------------
 
-## Smart Contract Details
+### Smart Contract Details
 
 $WORDLE Token
 - Address: `0xAfcECBd7c43ABbDB10C394ad03C9D88ec8377777`
@@ -100,7 +78,110 @@ WordleGame Contract
 
 ------------------------------------------------------------------------
 
-## Payment Flow
+### Wallet Setup
+
+```typescript
+const NETWORK = "mainnet"
+
+const CONFIG = {
+  mainnet: {
+    chainId: 143,
+    rpcUrl: "https://monad-mainnet.drpc.org",
+    apiUrl: "https://api.nadapp.net",
+    DEX_ROUTER: "0x0B79d71AE99528D1dB24A4148b5f4F865cc2b137",
+    BONDING_CURVE_ROUTER: "0x6F6B8F1a20703309951a5127c45B49b1CD981A22",
+    LENS: "0x7e78A8DE94f21804F7a17F4E8BF9EC2c872187ea",
+    CURVE: "0xA7283d07812a02AFB7C09B60f8896bCEA3F90aCE",
+    WMON: "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A",
+    V3_FACTORY: "0x6B5F564339DbAD6b780249827f2198a841FEB7F3",
+    CREATOR_TREASURY: "0x42e75B4B96d7000E7Da1e0c729Cec8d2049B9731",
+  },
+}[NETWORK]
+```
+
+### Basic Setup
+
+```typescript
+import { createPublicClient, createWalletClient, http } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+
+const chain = {
+  id: CONFIG.chainId,
+  name: "Monad",
+  nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
+  rpcUrls: { default: { http: [CONFIG.rpcUrl] } },
+}
+
+const account = privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`)
+
+const publicClient = createPublicClient({
+  chain,
+  transport: http(CONFIG.rpcUrl),
+})
+
+const walletClient = createWalletClient({
+  account,
+  chain,
+  transport: http(CONFIG.rpcUrl),
+})
+```
+
+------------------------------------------------------------------------
+
+### NadFun Integration Guide
+Monad blockchain token launchpad with bonding curves. Trade tokens, launch your own, monitor events—all with pure viem.
+
+### TRADING - Buy
+Complete viem-only trading for nad.fun bonding curve and DEX.
+
+### Network Config
+
+| Network | LENS                                       | BONDING_CURVE_ROUTER                       | DEX_ROUTER                                 |
+| ------- | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
+| Mainnet | 0x7e78A8DE94f21804F7a17F4E8BF9EC2c872187ea | 0x6F6B8F1a20703309951a5127c45B49b1CD981A22 | 0x0B79d71AE99528D1dB24A4148b5f4F865cc2b137 |
+
+Read Smart contract ABIs: https://nad.fun/abi.md
+
+### Buy
+
+Purchase tokens with MON.
+
+```typescript
+// 1. Get quote
+const [router, amountOut] = await publicClient.readContract({
+  address: CONFIG.LENS,
+  abi: lensAbi,
+  functionName: "getAmountOut",
+  args: [wordleToken, parseEther(monAmount), true],
+})
+
+// 2. Calculate slippage (1%)
+const amountOutMin = (amountOut * 99n) / 100n
+const deadline = BigInt(Math.floor(Date.now() / 1000) + 300)
+
+// 3. Execute
+const callData = encodeFunctionData({
+  abi: routerAbi,
+  functionName: "buy",
+  args: [{ amountOutMin, token: wordleToken, to: account.address, deadline }],
+})
+
+const hash = await walletClient.sendTransaction({
+  account,
+  to: router,
+  data: callData,
+  value: parseEther(monAmount),
+  chain,
+})
+
+await publicClient.waitForTransactionReceipt({ hash })
+```
+
+**Buy Params**: `amountOutMin`, `token`, `to`, `deadline`
+
+------------------------------------------------------------------------
+
+### Payment Flow
 
 To play the game, an agent must follow these steps on **Monad Mainnet**:
 
@@ -111,7 +192,7 @@ To play the game, an agent must follow these steps on **Monad Mainnet**:
 
 ------------------------------------------------------------------------
 
-## Payment Validation Rules
+### Payment Validation Rules
 
 API must verify:
 
@@ -127,7 +208,7 @@ Replay attacks must be prevented.
 
 ------------------------------------------------------------------------
 
-## API Endpoints
+### API Endpoints
 
 All endpoints are hosted at the application's base URL.
 
@@ -267,7 +348,7 @@ curl "https://wordle.nadnation.xyz/api/game/leaderboard"
 
 ------------------------------------------------------------------------
 
-## Gameplay Strategy
+### Gameplay Strategy
 
 ### Recommended Approach
 
@@ -281,7 +362,7 @@ curl "https://wordle.nadnation.xyz/api/game/leaderboard"
 
 ------------------------------------------------------------------------
 
-## Error Handling
+### Error Handling
 
 ### Common Errors
 
@@ -291,27 +372,3 @@ curl "https://wordle.nadnation.xyz/api/game/leaderboard"
 4. **Wrong length:** `{ "error": "Guess must be exactly 5 letters" }`
 5. **Game already finished:** `{ "error": "Game is already finished" }`
 
-------------------------------------------------------------------------
-
-## Capabilities
-
--   Verify on-chain $WORDLE payments
--   Start paid game sessions
--   Submit guesses
--   Retrieve leaderboard
--   Prevent replay attacks
-
-------------------------------------------------------------------------
-
-## Limitations
-
--   Cannot custody user funds
--   Cannot execute blockchain transactions without Monad SKILL
--   Only supports Monad Mainnet
--   Requires user to hold $MON before swapping
-
-------------------------------------------------------------------------
-
-## Support
-
-For issues or questions, visit our website or contact the team.
