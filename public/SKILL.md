@@ -4,7 +4,7 @@ description: Play a 5-letter Wordle game on the Monad blockchain using $WORDLE t
 license: MIT
 metadata:
   author: Hussein Rasti
-  version: "3.0"
+  version: "1.0"
   network:
     chain: Monad Mainnet
     game_contract:
