@@ -17,10 +17,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Monad Wordle - Play Wordle on Monad",
-  description: `A 5-letter Wordle game on the Monad blockchain. Pay ${process.env.NEXT_PUBLIC_GAME_COST || "100"} $WORDLE to play and compete on the leaderboard!`,
+  description: `A 5-letter Wordle game on the Monad blockchain.`,
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+    other: {
+      rel: "icon",
+      type: "image/png",
+      sizes: "192x192",
+      url: "/app-icon.png",
+    },
   },
 };
 
